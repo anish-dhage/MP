@@ -1,0 +1,180 @@
+%macro myprintf 1
+	mov rdi,formatpf
+	mov rax,1
+	sub rsp,8
+	movsd xmm0,[%1]
+	call printf
+	add rsp,8
+%endmacro
+	
+%macro myscanf 1
+	mov rdi,formatsf
+	mov rax,0
+	sub rsp,8
+	mov rsi,rsp
+	call scanf
+	mov r8,qword[rsp]
+	mov qword[%1],r8
+	add rsp,8
+%endmacro
+
+%macro write 2
+	mov rax,1
+	mov rdi,1
+	mov rsi,%1
+	mov rdx,%2
+	syscall
+%endmacro
+
+extern printf
+extern scanf
+
+section .data
+
+	msg db "Enter a,b,c for ax^2+bx+c=0",10
+	len equ $- msg
+	
+	root1 db " Root 1 ="
+	lenr1 equ $- root1
+	root2 db " Root 2 ="
+	lenr2 equ $- root2
+	
+	newline db " ",10
+	lennew equ $- newline
+	img db "Imaginary roots =",10
+	leni equ $- img
+	real db "Real roots =",10
+	lenr equ $- real
+	
+	invm db "Invalid input!",10
+	lem equ $- invm
+	
+	hexc dq 100
+	four dq 4
+	two dq 2
+	
+ff1: db "%lf + %lfi",10,0
+ff2: db "%lf - %lfi",10,0
+formatpf: db "%lf",10,0
+formatsf: db "%lf",0
+	
+section .bss
+	a resq 1
+	b resq 1
+	c resq 1
+	
+	b2 resq 1
+	fac resq 1				;4ac
+	
+	delta resq 1
+	rdelta resq 1			;root delta
+	r1 resq 1
+	r2 resq 1
+	ta resq 1				;2a
+	realn resq 1   			;-b/2a
+	img1 resq 1	
+	img2 resq 1
+	
+section .text
+
+	global main
+	main:
+
+	write msg,len			;reading the inputs
+	myscanf a
+	myscanf b
+	myscanf c
+	
+cmp qword[a],0
+je exitm
+
+fld qword[b]				;finding b^2
+fmul qword[b]
+fstp qword[b2]
+mov rax,qword[b2]
+
+fild qword[four]			;finding 4ac
+fmul qword[a]
+fmul qword[c]
+fstp qword[fac]
+mov rbx,qword[fac]
+
+fld qword[b2]				;calculating root of b^2-4ac
+fsub qword[fac]
+fstp qword[delta]
+mov rcx,qword[delta]
+
+b1:
+fild qword[two]				;calculating 2a
+fmul qword[a]
+fstp qword[ta]
+
+btr qword[delta],63			;checking if roots are imaginary
+
+	jc imag					;jump to imaginary if roots are imaginary
+	
+write real,lenr				;write message
+
+fld qword[delta]
+fsqrt
+fstp qword[rdelta]
+mov rdx,qword[rdelta]
+
+b21:
+fldz						;final root1 calculation
+fsub qword[b]
+fadd qword[rdelta]
+fdiv qword[ta]
+fstp qword[r1]
+myprintf r1
+
+fldz						;final root2 calculation
+fsub qword[b]
+fsub qword[rdelta]
+fdiv qword[ta]
+fstp qword[r2]
+myprintf r2
+jmp exit
+
+imag:						;if roots are imaginary
+write img,leni	
+fld qword[delta]
+fsqrt
+fstp qword[rdelta]
+
+fldz						;finding real part
+fsub qword[b]
+fdiv qword[ta]
+fstp qword[realn]
+
+fld qword[rdelta]			;finding imaginary part
+fdiv qword[ta]
+fstp qword[img1]
+
+mov rdi,ff1					;writing imaginary roots
+sub rsp,8
+movsd xmm0,[realn]
+movsd xmm1,[img1]
+mov rax,2
+call printf
+add rsp,8
+
+mov rdi,ff2
+sub rsp,8
+movsd  xmm0, [realn]
+movsd xmm1, [img1]
+mov rax,2
+call printf
+add rsp,8		
+	
+exit:	
+mov rax,60
+mov rdi,0
+syscall
+	
+exitm:
+write invm,lem	
+mov rax,60
+mov rdi,0
+syscall	
+
