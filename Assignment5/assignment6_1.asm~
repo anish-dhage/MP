@@ -1,0 +1,58 @@
+extern filename
+extern desc
+extern string
+extern size
+extern ipchr
+extern scount
+
+global counter
+
+
+section .data
+
+section .text
+	global start
+	
+mov eax,1					;exit
+int 0x80
+
+counter:
+	mov ecx,[size]			;move size of string into counter
+	mov esi,string			;move address of string into esi
+	xor edx,edx
+  l1:
+  	mov al,byte[ipchr]
+	cmp byte[esi],al		;compare with ascii value of character
+	jne l2
+	inc edx					;increment counter if equal
+  l2:
+	inc esi					;increment address
+	loop l1
+  l3:	
+	mov rdi,scount			;move final count to rdi
+	call hex_to_ascii
+	
+	mov eax,4				;write scount
+	mov ebx,1
+	mov ecx,scount
+	mov edx,4
+	int 0x80
+	
+	ret						;return to function call
+		
+		
+hex_to_ascii:
+	mov rcx,4				;move length to counter	
+	xor rax,rax
+	l20: 
+	rol dx,04H				;rotate edx by 4
+	mov al,dl			
+	and al,0FH				;perform and operation on value in al
+	cmp al,09H
+	jbe l30
+	add al,07H				;add additional value if number is above 10
+	l30: add al,30H			;convert hex to ascii number
+	mov byte[rdi],al		;move value in al to sum
+	inc rdi			
+	loop l20	
+	ret	
